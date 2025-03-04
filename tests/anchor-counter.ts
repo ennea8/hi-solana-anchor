@@ -26,18 +26,18 @@ describe("anchor-counter", () => {
     expect(account.count.toNumber() === 0)
   })
 
-  // it("Incremented the count", async () => {
-  //   const tx = await program.methods
-  //     .increment()
-  //     .accounts({
-  //       counter: counter.publicKey,
-  //       user: provider.wallet.publicKey 
-  //     })
-  //     .rpc()
+  it("Incremented the count", async () => {
+    const tx = await program.methods
+      .increment(new anchor.BN(10))
+      .accounts({
+        counter: counter.publicKey,
+        //user: provider.wallet.publicKey // 可省略
+      })
+      .rpc()
 
-  //   const account = await program.account["counter"].fetch(counter.publicKey)
-  //   expect(account.count.toNumber() === 1)
-  // })
+    const account = await program.account["counter"].fetch(counter.publicKey)
+    expect(account.count.toNumber() === 10)
+  })
 
   // it("Decremented the count", async () => {
   //   const tx = await program.methods
