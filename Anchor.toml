@@ -6,6 +6,7 @@ skip-lint = false
 
 [programs.localnet]
 anchor_counter = "9uyaujBebdYM9gNdnreC4s8ivjT68Hy7HhDdAyWidVUt"
+anchor_movie_review_program = "FEWynf4QcTnscJotG6gxUmnodU47bBj7MkEd2tx8rkdY"
 
 [registry]
 url = "https://api.apr.dev"

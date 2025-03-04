@@ -9,7 +9,7 @@ pub mod anchor_counter {
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
         
-        //Account 实现了DerefMut，可直接访问内部的account
+        // Account 实现了DerefMut，可直接访问内部的account
         counter.count = 0;
         msg!("Counter Account Created");
         msg!("Current Count: { }", counter.count);
