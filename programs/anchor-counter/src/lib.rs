@@ -8,6 +8,8 @@ pub mod anchor_counter {
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         let counter = &mut ctx.accounts.counter;
+        
+        //Account 实现了DerefMut，可直接访问内部的account
         counter.count = 0;
         msg!("Counter Account Created");
         msg!("Current Count: { }", counter.count);
@@ -31,7 +33,7 @@ pub struct Initialize<'info> {
         payer = user,
         space = DISCRIMINATOR + Counter::INIT_SPACE
     )]
-    pub counter: Account<'info, Counter>,
+    pub counter: Account<'info, Counter>, 
     #[account(mut)]
     pub user: Signer<'info>, // payer for the transaction fee
     pub system_program: Program<'info, System>,
@@ -44,8 +46,6 @@ pub struct Update<'info> {
     pub user: Signer<'info>,
 }
 
-// TODO 这是一个有密钥的地址？ 并且可以存储数据？
-// 运行示类例代码？
 #[account]
 #[derive(InitSpace)]
 pub struct Counter {
