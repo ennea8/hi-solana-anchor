@@ -35,11 +35,18 @@ pub mod anchor_movie_review_program {
 pub struct Initialize {}
 
 #[derive(Accounts)]
+#[instruction(title: String, description: String, rating: u8)]
 pub struct AddMovieReview<'info> {
     #[account(
         init,
         payer = initializer,
-        space = 8 + 32 + 1 + 4 + 50 + 4 + 300 // discriminator + pubkey + rating + title length + title + description length + description
+        space = MovieAccountState::INIT_SPACE,
+        seeds = [
+            b"movie_review",
+            initializer.key().as_ref(),
+            title.as_bytes()
+        ],
+        bump
     )]
     pub movie_review: Account<'info, MovieAccountState>,
     #[account(mut)]
@@ -48,9 +55,12 @@ pub struct AddMovieReview<'info> {
 }
 
 #[account]
+#[derive(InitSpace)]
 pub struct MovieAccountState {
     pub reviewer: Pubkey,    // 32
     pub rating: u8,          // 1
+    #[max_len(50)]
     pub title: String,       // 4 + 50
+    #[max_len(300)]
     pub description: String, // 4 + 300
 }
