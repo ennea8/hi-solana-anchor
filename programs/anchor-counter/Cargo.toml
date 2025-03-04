@@ -1,12 +1,12 @@
 [package]
-name = "hi-solana-anchor"
+name = "anchor-counter"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "hi_solana_anchor"
+name = "anchor_counter"
 
 [features]
 default = []

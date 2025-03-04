@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-hi_solana_anchor = "HUUAj59uBGfY74wXDbEtf3kvp1X4kPhVdVwEyc5tMdMg"
+anchor_counter = "9uyaujBebdYM9gNdnreC4s8ivjT68Hy7HhDdAyWidVUt"
 
 [registry]
 url = "https://api.apr.dev"
