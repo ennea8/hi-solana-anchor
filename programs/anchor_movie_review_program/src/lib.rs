@@ -1,4 +1,6 @@
 use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{mint_to, Mint, MintTo, Token, TokenAccount};
 
 declare_id!("FEWynf4QcTnscJotG6gxUmnodU47bBj7MkEd2tx8rkdY");
 
@@ -19,6 +21,10 @@ pub mod anchor_movie_review_program {
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
         Ok(())
     }
+    pub fn initialize_token_mint(_ctx: Context<InitializeMint>) -> Result<()> {
+        msg!("Token mint initialized");
+        Ok(())
+    }
 
     pub fn add_movie_review(
         ctx: Context<AddMovieReview>,
@@ -26,9 +32,15 @@ pub mod anchor_movie_review_program {
         description: String,
         rating: u8,
     ) -> Result<()> {
-        require!(rating >= 1 && rating <= 5, MovieReviewError::RatingNotInRange);
+        require!(
+            rating >= 1 && rating <= 5,
+            MovieReviewError::RatingNotInRange
+        );
         require!(title.len() <= 50, MovieReviewError::TitleTooLong);
-        require!(description.len() <= 300, MovieReviewError::DescriptionTooLong);
+        require!(
+            description.len() <= 300,
+            MovieReviewError::DescriptionTooLong
+        );
 
         msg!("Movie Review Account Created");
         msg!("Title: {}", title);
@@ -40,6 +52,23 @@ pub mod anchor_movie_review_program {
         movie_review.title = title;
         movie_review.rating = rating;
         movie_review.description = description;
+
+        // 发起 CPI
+        mint_to(
+            // 构造 CpiContext
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    authority: ctx.accounts.initializer.to_account_info(),
+                    to: ctx.accounts.token_account.to_account_info(),
+                    mint: ctx.accounts.mint.to_account_info(),
+                },
+                &[&["mint".as_bytes(), &[ctx.bumps.mint]]], // ？？？
+            ),
+            10 * 10u64.pow(6),
+        )?;
+
+        msg!("Minted tokens");
 
         Ok(())
     }
@@ -65,7 +94,41 @@ pub struct AddMovieReview<'info> {
     #[account(mut)]
     pub initializer: Signer<'info>,
     pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>, // 官方提供的token程序，不可变
+    #[account(
+        seeds = ["mint".as_bytes()],
+        bump,
+        mut
+    )]
+    pub mint: Account<'info, Mint>, // 存储supply 和 decimals数据
+    #[account(
+        init_if_needed,
+        payer = initializer,
+        associated_token::mint = mint,
+        associated_token::authority = initializer
+    )]
+    pub token_account: Account<'info, TokenAccount>, // 包含owner，amount数据
+    pub associated_token_program: Program<'info, AssociatedToken>, //required: 在 associated_token 上使用 token_account 约束。 ？？？
 }
+
+#[derive(Accounts)]
+pub struct InitializeMint<'info> {
+    #[account(
+        init,
+        seeds = ["mint".as_bytes()],
+        bump,
+        payer = user,
+        mint::decimals = 6,
+        mint::authority = user,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+}
+
 
 #[account]
 pub struct MovieAccountState {

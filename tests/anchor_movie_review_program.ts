@@ -3,13 +3,14 @@ import { Program } from "@coral-xyz/anchor";
 import { AnchorMovieReviewProgram } from "../target/types/anchor_movie_review_program";
 import { expect } from "chai";
 import * as crypto from 'crypto';
+import { getAssociatedTokenAddress, getAccount } from "@solana/spl-token";
 
 describe("anchor_movie_review_program", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
 
   const program = anchor.workspace.AnchorMovieReviewProgram as Program<AnchorMovieReviewProgram>;
-  
+
   // 需确保不同test title值不一样，否则地址会有冲突 
 
   it("Successfully adds a movie review", async () => {
@@ -17,8 +18,8 @@ describe("anchor_movie_review_program", () => {
     const description = "A mind-bending masterpiece about dreams within dreams.";
     const rating = 5;
 
-    let hexString = crypto.createHash('sha256').update(title,'utf-8').digest('hex');
-    let titleHash = Uint8Array.from(Buffer.from(hexString,'hex'))
+    let hexString = crypto.createHash('sha256').update(title, 'utf-8').digest('hex');
+    let titleHash = Uint8Array.from(Buffer.from(hexString, 'hex'))
 
     const [movieReviewPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
@@ -28,21 +29,42 @@ describe("anchor_movie_review_program", () => {
       program.programId
     );
 
+    const [mint] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("mint")],
+      program.programId
+    );
+    let tokenAccount = await getAssociatedTokenAddress(
+      mint,
+      provider.wallet.publicKey
+    );
+
+    try {
+      await program.methods.initializeTokenMint().rpc();
+    } catch (error) {
+      console.error("Error initializing token mint:", error);
+      throw error;
+    }
+
+
     await program.methods
       .addMovieReview(title, description, rating)
       .accounts({
         movieReview: movieReviewPda,
-        initializer: provider.wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        // initializer: provider.wallet.publicKey, // 可省略
+        // systemProgram: anchor.web3.SystemProgram.programId, // 可省略
+        // tokenAccount, //可省略。 自动推断？
       })
       .rpc();
 
     const account = await program.account.movieAccountState.fetch(movieReviewPda);
-    
+
     expect(account.title).to.equal(title);
     expect(account.description).to.equal(description);
     expect(account.rating).to.equal(rating);
     expect(account.reviewer.toBase58()).to.equal(provider.wallet.publicKey.toBase58());
+
+    const userAta = await getAccount(provider.connection, tokenAccount);
+    expect(Number(userAta.amount)).to.equal(10 * 10 ** 6);
   });
 
   it("Fails with invalid rating", async () => {
@@ -50,22 +72,22 @@ describe("anchor_movie_review_program", () => {
     const description = "A mind-bending masterpiece";
     const rating = 6; // Invalid rating
 
+
+    let hexString = crypto.createHash('sha256').update(title, 'utf-8').digest('hex');
+    let titleHash = Uint8Array.from(Buffer.from(hexString, 'hex'))
+
+    const [movieReviewPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        titleHash,
+        provider.wallet.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
     try {
-      let hexString = crypto.createHash('sha256').update(title,'utf-8').digest('hex');
-      let titleHash = Uint8Array.from(Buffer.from(hexString,'hex'))
-
-      const [movieReviewPda] = anchor.web3.PublicKey.findProgramAddressSync(
-        [
-          titleHash,
-          provider.wallet.publicKey.toBuffer(),
-        ],
-        program.programId
-      );
-
-    
       await program.methods
         .addMovieReview(title, description, rating)
-        .accounts({
+        .accounts({ 
           movieReview: movieReviewPda,
           initializer: provider.wallet.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
@@ -74,7 +96,7 @@ describe("anchor_movie_review_program", () => {
       assert.fail("Should have failed with invalid rating");
     } catch (err) {
       const errMsg = err.toString();
-      console.log('errMsg',errMsg)
+      console.log('errMsg', errMsg)
       expect(errMsg).to.include("Rating must be between 1 and 5");
     }
   });
@@ -85,8 +107,8 @@ describe("anchor_movie_review_program", () => {
     const rating = 5;
 
     try {
-      let hexString = crypto.createHash('sha256').update(title,'utf-8').digest('hex');
-      let titleHash = Uint8Array.from(Buffer.from(hexString,'hex'))
+      let hexString = crypto.createHash('sha256').update(title, 'utf-8').digest('hex');
+      let titleHash = Uint8Array.from(Buffer.from(hexString, 'hex'))
 
 
       // 使用标题的哈希作为种子，避免超出长度限制
@@ -98,7 +120,7 @@ describe("anchor_movie_review_program", () => {
         program.programId
       );
 
-    
+
       await program.methods
         .addMovieReview(title, description, rating)
         .accounts({
@@ -110,7 +132,7 @@ describe("anchor_movie_review_program", () => {
       assert.fail("Should have failed with too long title");
     } catch (err) {
       const errMsg = err.toString();
-      console.log('errMsg',errMsg)
+      console.log('errMsg', errMsg)
       expect(errMsg).to.include("Title length should be less than 50 characters");
     }
   });
@@ -120,8 +142,8 @@ describe("anchor_movie_review_program", () => {
     const description = "A".repeat(301); // Description longer than 300 characters
     const rating = 5;
 
-    let hexString = crypto.createHash('sha256').update(title,'utf-8').digest('hex');
-    let titleHash = Uint8Array.from(Buffer.from(hexString,'hex'))
+    let hexString = crypto.createHash('sha256').update(title, 'utf-8').digest('hex');
+    let titleHash = Uint8Array.from(Buffer.from(hexString, 'hex'))
 
     const [movieReviewPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
